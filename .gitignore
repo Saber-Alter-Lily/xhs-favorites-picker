@@ -1,0 +1,9 @@
+.runtime/
+.chrome-debug-profile/
+.redbook-cookies.json
+.redbook-cookie.txt
+.subscriptions.json
+.favorites-cache.json
+downloads/
+__pycache__/
+*.pyc
