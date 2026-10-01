@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>XHS 图片选择器</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="topin">
+    <div class="brand">XHS 图片选择器 <span class="version">v0.6.2</span></div>
+    <div class="tabs">
+      <button id="discoverTab" class="tab active" onclick="showView('discover')">发现 / 下载</button>
+      <button id="subscriptionsTab" class="tab" onclick="showView('subscriptions')">订阅 <span id="subscriptionBadge" class="tab-badge hidden">0</span></button>
+      <button id="libraryTab" class="tab" onclick="showView('library')">本地阅读 <span id="libraryBadge" class="tab-badge muted-badge hidden">0</span></button>
+    </div>
+    <div class="grow"></div>
+    <button class="btn" onclick="openOutput()">打开 downloads</button>
+  </div>
+</header>
+<div id="toast" class="toast"></div>
+
+<main id="main" class="main">
+<section id="discoverView">
+  <div class="panel discover-head">
+    <div class="row">
+      <input id="shareLinkInput" class="input growinput" placeholder="粘贴小红书分享文案或链接，快速加入待下载列表">
+      <button class="btn primary" onclick="resolveShareLink()">解析链接</button>
+    </div>
+    <div class="row">
+      <button class="btn primary" onclick="loadFavorites()">我的收藏</button>
+      <button class="btn" onclick="loadFavorites(true)">同步收藏</button>
+      <input id="localSearch" class="input growinput" placeholder="筛选当前列表：标题 / 作者" oninput="renderDiscover()">
+      <button class="btn" onclick="selectDiscoverFiltered()">全选当前结果</button>
+      <button class="btn" onclick="clearDiscoverSelected()">取消全选</button>
+    </div>
+    <div class="row secondary-row">
+      <input id="authorInput" class="input" placeholder="作者主页 URL / user_id">
+      <button class="btn" onclick="loadAuthorManual()">打开作者</button>
+      <button id="loadMoreAuthorBtn" class="btn hidden" onclick="loadMoreAuthor()">继续加载作者作品</button>
+      <input id="globalSearch" class="input" placeholder="平台搜索关键词">
+      <button class="btn" onclick="globalSearch()">平台搜索</button>
+    </div>
+    <div id="discoverStatus" class="status">正在准备收藏列表……</div>
+    <div id="libraryBanner" class="library-banner hidden">
+      <div>
+        <strong id="libraryBannerTitle">检测到本地下载仓库</strong>
+        <div id="libraryBannerText" class="muted"></div>
+      </div>
+      <button class="btn primary" onclick="openLibraryReader()">打开本地阅读器</button>
+    </div>
+    <div id="subscriptionBanner" class="subscription-banner hidden">
+      <div>
+        <strong id="subscriptionBannerTitle">订阅有更新</strong>
+        <div id="subscriptionBannerText" class="muted"></div>
+      </div>
+      <div class="row">
+        <button class="btn" onclick="showView('subscriptions')">查看更新</button>
+        <button class="btn primary" onclick="downloadAllSubscriptionUpdates()">一键下载全部更新</button>
+      </div>
+    </div>
+  </div>
+  <div class="toolbar">
+    <div id="sourceTitle" class="title">我的收藏</div>
+    <span id="discoverCount" class="muted"></span>
+  </div>
+  <div id="discoverGrid" class="grid post-grid"></div>
+  <div class="pager">
+    <button class="btn" onclick="discoverPrevPage()">上一页</button>
+    <span id="discoverPageText" class="muted"></span>
+    <button class="btn" onclick="discoverNextPage()">下一页</button>
+  </div>
+</section>
+
+<section id="subscriptionsView" class="hidden">
+  <div class="panel">
+    <div class="row">
+      <button id="checkSubscriptionsBtn" class="btn primary" onclick="checkSubscriptions()">立即检查更新</button>
+      <button id="downloadAllUpdatesBtn" class="btn" onclick="downloadAllSubscriptionUpdates()">下载全部更新</button>
+      <button class="btn" onclick="markAllUpdatesHandled()">全部标记已处理</button>
+    </div>
+    <div id="subscriptionStatus" class="status">订阅检查采用低频策略；短时间内重复启动不会再次全量检查。</div>
+  </div>
+
+  <div class="toolbar">
+    <div class="title">订阅作者</div>
+    <span id="subscriptionSummary" class="muted"></span>
+  </div>
+  <div id="subscriptionAuthors" class="subscription-list"></div>
+
+  <div class="toolbar subscription-update-toolbar">
+    <div class="title">待处理更新</div>
+    <select id="subscriptionAuthorFilter" class="input select" onchange="renderSubscriptionUpdates()"><option value="">全部作者</option></select>
+    <input id="subscriptionSearch" class="input growinput" placeholder="筛选更新：标题 / 作者" oninput="renderSubscriptionUpdates()">
+    <button class="btn" onclick="selectAllFilteredUpdates()">全选当前结果</button>
+    <button class="btn" onclick="clearSelectedUpdates()">取消全选</button>
+  </div>
+  <div id="subscriptionGrid" class="grid post-grid"></div>
+</section>
+
+<section id="libraryView" class="hidden">
+  <div class="panel">
+    <div class="row">
+      <select id="authorFilter" class="input select" onchange="renderLibrary()"><option value="">全部作者</option></select>
+      <input id="librarySearch" class="input growinput" placeholder="筛选已下载文章：标题 / 作者" oninput="renderLibrary()">
+      <div class="segmented">
+        <button id="articleModeBtn" class="seg active" onclick="setLibraryMode('articles')">文章视图</button>
+        <button id="imageModeBtn" class="seg" onclick="setLibraryMode('images')">全部图片</button>
+      </div>
+      <button class="btn" onclick="selectLibraryFiltered()">全选当前结果</button>
+      <button class="btn" onclick="clearImageSelection()">取消全选</button>
+      <button class="btn" onclick="loadLibrary()">重新扫描</button>
+    </div>
+    <div id="libraryStatus" class="status">读取本地 downloads 图库。</div>
+  </div>
+  <div class="toolbar">
+    <div class="title">本地阅读器</div>
+    <span id="libraryCount" class="muted"></span>
+  </div>
+  <div id="libraryGrid" class="grid post-grid"></div>
+</section>
+</main>
+
+<div id="discoverBottom" class="bottom">
+  <div class="bottomin">
+    <strong>已选帖子 <span id="discoverSelectedCount">0</span> 篇</strong>
+    <div class="spacer"></div>
+    <div id="downloadProgress" class="progress hidden"><div id="downloadBar" class="bar"></div></div>
+    <span id="jobText" class="muted"></span>
+    <button id="downloadBtn" class="btn primary" onclick="downloadSelected()">下载已选图片</button>
+  </div>
+</div>
+
+<div id="subscriptionsBottom" class="bottom hidden">
+  <div class="bottomin">
+    <strong>已选更新 <span id="updateSelectedCount">0</span> 篇</strong>
+    <div class="spacer"></div>
+    <div id="subscriptionProgress" class="progress hidden"><div id="subscriptionBar" class="bar"></div></div>
+    <span id="subscriptionJobText" class="muted"></span>
+    <button id="downloadSelectedUpdatesBtn" class="btn primary" onclick="downloadSelectedUpdates()">下载已选更新</button>
+  </div>
+</div>
+
+<div id="libraryBottom" class="bottom hidden">
+  <div class="bottomin transferbar">
+    <strong>已选图片 <span id="imageSelectedCount">0</span> 张</strong>
+    <input id="destinationInput" class="input destination" placeholder="目标文件夹">
+    <button class="btn" onclick="pickDestination()">选择文件夹…</button>
+    <label class="checklabel"><input id="preserveFolders" type="checkbox" checked> 保留文章子文件夹</label>
+    <div class="spacer"></div>
+    <button class="btn" onclick="transferImages('copy')">复制到…</button>
+    <button class="btn danger" onclick="transferImages('move')">移动到…</button>
+  </div>
+</div>
+
+<div id="articleModal" class="modal hidden" onclick="modalBackdrop(event,'articleModal')">
+  <div class="modal-card article-modal-card">
+    <button class="close" onclick="closeArticle()">×</button>
+    <div class="modal-header">
+      <div>
+        <h2 id="articleTitle"></h2>
+        <div id="articleMeta" class="muted"></div>
+      </div>
+      <div class="row">
+        <button class="btn" onclick="toggleCurrentArticle(true)">全选本篇</button>
+        <button class="btn" onclick="toggleCurrentArticle(false)">取消本篇</button>
+      </div>
+    </div>
+    <div id="articleImages" class="image-grid"></div>
+  </div>
+</div>
+
+<div id="lightbox" class="lightbox hidden" onclick="lightboxBackdrop(event)">
+  <button class="light-close" onclick="closeLightbox()">×</button>
+  <button class="light-nav left" onclick="lightPrev(event)">‹</button>
+  <img id="lightImage" alt="">
+  <button class="light-nav right" onclick="lightNext(event)">›</button>
+  <div id="lightCaption" class="light-caption"></div>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>
